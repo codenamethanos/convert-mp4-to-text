@@ -74,15 +74,15 @@ def main():
     # List of video files to process
     video_files = [
         "How to Build a Startup Without Funding by Pieter Levels Dojo Bali.mp4",
-        "5.2-+Getting+lead+for+date.mp4",
-        "5.3+-+Messaging+Sequence+For+Dates.mp4",
-        "5.4+venus+section.mp4",
-        "5.5+-+setting+up+date.mp4",
-        "5.6-+texting+post+setup.mp4",
-        "5.7-+Date+Mindset.mp4",
-        "5.8-+what+to+do+on+date.mp4",
-        "5.9-+What+To+Do+Back+at+the+House.mp4",
-        "5.10-+Setting+Up+the+House.mp4",
+        # "5.2-+Getting+lead+for+date.mp4",
+        # "5.3+-+Messaging+Sequence+For+Dates.mp4",
+        # "5.4+venus+section.mp4",
+        # "5.5+-+setting+up+date.mp4",
+        # "5.6-+texting+post+setup.mp4",
+        # "5.7-+Date+Mindset.mp4",
+        # "5.8-+what+to+do+on+date.mp4",
+        # "5.9-+What+To+Do+Back+at+the+House.mp4",
+        # "5.10-+Setting+Up+the+House.mp4",
     ]
 
     process_videos(video_files, media_dir, audio_dir, output_dir)
