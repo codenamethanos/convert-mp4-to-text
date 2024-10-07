@@ -1,0 +1,22 @@
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual environment
+speech2text/
+
+# Vosk model files
+models/
+
+# Media files
+media/
+audio/
+output/
+finaloutput/
+final/
+
+# Environment variables
+.env
+
+# Python byte-compiled files
+__pycache__/
+*.py[cod]
