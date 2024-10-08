@@ -1,13 +1,16 @@
 from moviepy.editor import VideoFileClip
 import os
 import whisper
-import time  # Import the time module
+import time
+import numpy as np
+from tqdm import tqdm
 
 def convert_mp4_to_wav(input_file, output_file):
     """
     Convert an MP4 video file directly to a WAV audio file using MoviePy,
     ensuring the output is mono and at the correct sample rate.
     """
+    print(f"Converting {input_file} to WAV format...")
     video_clip = VideoFileClip(input_file)
     audio_clip = video_clip.audio
     
@@ -19,27 +22,64 @@ def convert_mp4_to_wav(input_file, output_file):
     
     audio_clip.write_audiofile(output_file, codec='pcm_s16le', ffmpeg_params=ffmpeg_params)
     audio_clip.close()
+    print(f"Conversion complete. WAV file saved as {output_file}")
 
-def transcribe_audio(audio_path):
+def transcribe_audio_streaming(audio_path, model):
     """
-    Transcribe the given audio file using the Whisper model.
+    Transcribe the given audio file using the Whisper model with streaming.
     """
-    model = whisper.load_model("small")  # Load the Whisper small model
-    result = model.transcribe(audio_path)
-    return result["text"]
+    # Load audio
+    audio = whisper.load_audio(audio_path)
+    
+    # Determine chunk size (30 seconds)
+    chunk_length = 30 * 16000  # 30 seconds * 16000 sample rate
+    
+    # Calculate number of chunks
+    num_chunks = int(np.ceil(len(audio) / chunk_length))
+    
+    # Initialize an empty transcript
+    full_transcript = ""
+
+    # Process audio in chunks
+    with tqdm(total=num_chunks, desc="Transcribing", unit="chunk") as pbar:
+        for i in range(num_chunks):
+            # Extract chunk
+            chunk_start = i * chunk_length
+            chunk_end = min(len(audio), (i + 1) * chunk_length)
+            audio_chunk = audio[chunk_start:chunk_end]
+
+            # Pad audio chunk if it's shorter than 30 seconds
+            if len(audio_chunk) < chunk_length:
+                audio_chunk = np.pad(audio_chunk, (0, chunk_length - len(audio_chunk)))
+
+            # Transcribe chunk
+            result = model.transcribe(audio_chunk, fp16=False)
+            full_transcript += result["text"] + " "
+
+            # Update progress bar
+            pbar.update(1)
+
+    return full_transcript.strip()
 
 def write_transcript(transcript_text, output_path):
     """
     Write the transcription results to a text file.
     """
-    with open(output_path, 'w') as f:
+    print(f"Writing transcript to {output_path}...")
+    with open(output_path, 'w', encoding='utf-8') as f:
         f.write(transcript_text + '\n')
+    print("Transcript saved successfully.")
 
 def process_videos(video_files, media_dir, audio_dir, output_dir):
     """
     Process a list of video files to convert to audio, transcribe, and save transcripts.
     """
+    # Load Whisper model once
+    print("Loading Whisper model (small)...")
+    model = whisper.load_model("small")
+
     for video_file in video_files:
+        print(f"\nProcessing video: {video_file}")
         start_time = time.time()  # Start timing
 
         input_video = os.path.join(media_dir, video_file)
@@ -50,7 +90,8 @@ def process_videos(video_files, media_dir, audio_dir, output_dir):
         convert_mp4_to_wav(input_video, output_audio)
 
         # Transcribe the audio file
-        transcript_text = transcribe_audio(output_audio)
+        print("Starting audio transcription. This may take a while...")
+        transcript_text = transcribe_audio_streaming(output_audio, model)
 
         # Write the transcription to a file
         write_transcript(transcript_text, output_transcript)
@@ -74,15 +115,6 @@ def main():
     # List of video files to process
     video_files = [
         "How to Build a Startup Without Funding by Pieter Levels Dojo Bali.mp4",
-        # "5.2-+Getting+lead+for+date.mp4",
-        # "5.3+-+Messaging+Sequence+For+Dates.mp4",
-        # "5.4+venus+section.mp4",
-        # "5.5+-+setting+up+date.mp4",
-        # "5.6-+texting+post+setup.mp4",
-        # "5.7-+Date+Mindset.mp4",
-        # "5.8-+what+to+do+on+date.mp4",
-        # "5.9-+What+To+Do+Back+at+the+House.mp4",
-        # "5.10-+Setting+Up+the+House.mp4",
     ]
 
     process_videos(video_files, media_dir, audio_dir, output_dir)
