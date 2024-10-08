@@ -24,9 +24,10 @@ def convert_mp4_to_wav(input_file, output_file):
     audio_clip.close()
     print(f"Conversion complete. WAV file saved as {output_file}")
 
-def transcribe_audio_streaming(audio_path, model):
+def transcribe_audio_streaming(audio_path, model, output_path):
     """
-    Transcribe the given audio file using the Whisper model with streaming.
+    Transcribe the given audio file using the Whisper model with streaming,
+    displaying results in real-time and writing to file incrementally.
     """
     # Load audio
     audio = whisper.load_audio(audio_path)
@@ -37,38 +38,35 @@ def transcribe_audio_streaming(audio_path, model):
     # Calculate number of chunks
     num_chunks = int(np.ceil(len(audio) / chunk_length))
     
-    # Initialize an empty transcript
-    full_transcript = ""
+    # Open the output file in append mode
+    with open(output_path, 'a', encoding='utf-8') as f:
+        # Process audio in chunks
+        with tqdm(total=num_chunks, desc="Transcribing", unit="chunk") as pbar:
+            for i in range(num_chunks):
+                # Extract chunk
+                chunk_start = i * chunk_length
+                chunk_end = min(len(audio), (i + 1) * chunk_length)
+                audio_chunk = audio[chunk_start:chunk_end]
 
-    # Process audio in chunks
-    with tqdm(total=num_chunks, desc="Transcribing", unit="chunk") as pbar:
-        for i in range(num_chunks):
-            # Extract chunk
-            chunk_start = i * chunk_length
-            chunk_end = min(len(audio), (i + 1) * chunk_length)
-            audio_chunk = audio[chunk_start:chunk_end]
+                # Pad audio chunk if it's shorter than 30 seconds
+                if len(audio_chunk) < chunk_length:
+                    audio_chunk = np.pad(audio_chunk, (0, chunk_length - len(audio_chunk)))
 
-            # Pad audio chunk if it's shorter than 30 seconds
-            if len(audio_chunk) < chunk_length:
-                audio_chunk = np.pad(audio_chunk, (0, chunk_length - len(audio_chunk)))
+                # Transcribe chunk
+                result = model.transcribe(audio_chunk, fp16=False)
+                chunk_text = result["text"].strip()
 
-            # Transcribe chunk
-            result = model.transcribe(audio_chunk, fp16=False)
-            full_transcript += result["text"] + " "
+                # Display chunk result
+                print(f"\nChunk {i+1}/{num_chunks}: {chunk_text}")
 
-            # Update progress bar
-            pbar.update(1)
+                # Write chunk result to file
+                f.write(chunk_text + ' ')
+                f.flush()  # Ensure the text is written immediately
 
-    return full_transcript.strip()
+                # Update progress bar
+                pbar.update(1)
 
-def write_transcript(transcript_text, output_path):
-    """
-    Write the transcription results to a text file.
-    """
-    print(f"Writing transcript to {output_path}...")
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(transcript_text + '\n')
-    print("Transcript saved successfully.")
+    print("\nTranscription complete. Full transcript saved to", output_path)
 
 def process_videos(video_files, media_dir, audio_dir, output_dir):
     """
@@ -91,10 +89,7 @@ def process_videos(video_files, media_dir, audio_dir, output_dir):
 
         # Transcribe the audio file
         print("Starting audio transcription. This may take a while...")
-        transcript_text = transcribe_audio_streaming(output_audio, model)
-
-        # Write the transcription to a file
-        write_transcript(transcript_text, output_transcript)
+        transcribe_audio_streaming(output_audio, model, output_transcript)
 
         end_time = time.time()  # End timing
         duration = end_time - start_time  # Calculate duration
@@ -114,7 +109,8 @@ def main():
 
     # List of video files to process
     video_files = [
-        "How to Build a Startup Without Funding by Pieter Levels Dojo Bali.mp4",
+        # "How to Build a Startup Without Funding by Pieter Levels Dojo Bali.mp4",
+        "videoplayback.mp4"
     ]
 
     process_videos(video_files, media_dir, audio_dir, output_dir)
