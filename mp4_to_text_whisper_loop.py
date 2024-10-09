@@ -110,7 +110,7 @@ def main():
     # List of video files to process
     video_files = [
         # "How to Build a Startup Without Funding by Pieter Levels Dojo Bali.mp4",
-        "videoplayback.mp4"
+        "tobi-square.mp4"
     ]
 
     process_videos(video_files, media_dir, audio_dir, output_dir)
